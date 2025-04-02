@@ -66,6 +66,14 @@
             background-color: #f8f9fa;
             border-left: 4px solid #0066cc;
         }
+        .sample {
+            font-family: monospace;
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 5px;
+            overflow-x: auto;
+        }
     </style>
 </head>
 <body>
@@ -78,8 +86,8 @@
         </div>
         
         <div>
-            <label for="monthYearInput">Enter month/year string:</label>
-            <input type="text" id="monthYearInput" placeholder="e.g., -10/2024">
+            <label for="monthYearInput">Enter month/year string (include the hyphen if needed):</label>
+            <input type="text" id="monthYearInput" placeholder="e.g., -10/2024 or 10/2024">
         </div>
         
         <button id="processButton">Process and Download DATEV CSV</button>
@@ -89,9 +97,14 @@
         <div class="instructions">
             <h3>Input Format Expected:</h3>
             <p>A CSV file with these columns: Name, Geb Dat, Kind-Nr./Antrag, Leist, Zeitraum, Tage, Entgelt, FEA, Fahrtkosten, Auszahlung</p>
+            <div class="sample">Name,Geb Dat,Kind-Nr./Antrag,Leist,Zeitraum,Tage,Entgelt,FEA,Fahrtkosten,Auszahlung</div>
             
             <h3>Output Format:</h3>
             <p>A DATEV-compatible CSV with: Betrag;WKZ;Soll_Haben;Sachkonto;Gegenkonto;Belegdatum;Gutscheinnummer_Monat</p>
+            <div class="sample">340.00;EUR;H;8400;1200;02.04.2025;K23456789-10/2024</div>
+            
+            <h3>Note:</h3>
+            <p>If you enter the month/year without a hyphen (e.g., "10/2024"), a hyphen will be added automatically.</p>
         </div>
     </div>
 
@@ -149,6 +162,23 @@
                 return `${day}.${month}.${year}`;
             }
             
+            // Function to format the Kind-Nr./Antrag with month/year
+            function formatGutscheinMitMonat(kindNr, monthYear) {
+                // Ensure there's a hyphen between the Kind-Nr and month/year
+                // First trim both values to avoid any whitespace issues
+                kindNr = kindNr.trim();
+                monthYear = monthYear.trim();
+                
+                // If monthYear already starts with a hyphen, use it directly
+                if (monthYear.startsWith('-')) {
+                    return kindNr + monthYear;
+                } 
+                // Otherwise, add a hyphen
+                else {
+                    return kindNr + '-' + monthYear;
+                }
+            }
+            
             // Function to handle the main processing
             processButton.addEventListener('click', function() {
                 // Reset status message
@@ -164,7 +194,7 @@
                 // Check if month/year string was entered
                 const monthYearString = monthYearInput.value.trim();
                 if (!monthYearString) {
-                    showStatus('Please enter a month/year string (e.g., -10/2024).', 'error');
+                    showStatus('Please enter a month/year string (e.g., -10/2024 or 10/2024).', 'error');
                     return;
                 }
                 
@@ -204,11 +234,8 @@
                             const gutscheinNummer = row[kindNrIndex].trim(); // 'Kind-Nr./Antrag'
                             const betrag = row[auszahlungIndex].trim(); // 'Auszahlung'
                             
-                            // Create new row with transformed data
-                            // Make sure there's a separator between voucher number and month/year
-                            const gutscheinWithMonth = monthYearString.startsWith('-') ? 
-                                gutscheinNummer + monthYearString : 
-                                gutscheinNummer + '-' + monthYearString;
+                            // Format the Gutscheinnummer with month/year
+                            const gutscheinWithMonth = formatGutscheinMitMonat(gutscheinNummer, monthYearString);
                             
                             const newRow = [
                                 betrag,                // Betrag
